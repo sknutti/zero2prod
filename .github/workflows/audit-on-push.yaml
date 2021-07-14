@@ -4,6 +4,8 @@ on:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+  schedule:
+    - cron: '0 0 * * *'
 jobs:
   security_audit:
     runs-on: ubuntu-latest
@@ -11,4 +13,4 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/audit-check@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.SCOTTS_PAT }}
