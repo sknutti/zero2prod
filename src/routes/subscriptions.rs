@@ -9,8 +9,27 @@ pub struct FormData {
     name: String,
 }
 
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(form, pool),
+    fields(
+        email = %form.email,
+        name = %form.name
+    )
+)]
 pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> impl Responder {
-    match sqlx::query!(
+    match insert_subscriber(&pool, &form).await {
+        Ok(_) => HttpResponse::Ok(),
+        Err(_) => HttpResponse::InternalServerError(),
+    }
+}
+
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
@@ -20,13 +39,13 @@ pub async fn subscribe(form: web::Form<FormData>, pool: web::Data<PgPool>) -> im
         form.name,
         Utc::now()
     )
-    .execute(pool.get_ref())
+    .execute(pool)
     .await
-    {
-        Ok(_) => HttpResponse::Ok(),
-        Err(e) => {
-            println!("Failed to execute query: {}", e);
-            HttpResponse::InternalServerError()
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+        // Using the `?` operator to return early
+        // if the function failed, returning a sqlx::Error
+    })?;
+    Ok(())
 }
