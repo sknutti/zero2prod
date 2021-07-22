@@ -16,7 +16,13 @@ async fn main() -> std::io::Result<()> {
     let configuration = get_configuration().expect("Failed to read configuration.");
     let connection_pool = PgPool::connect(&configuration.database.connection_string())
         .await
-        .expect("Failed to connect to Postgres.");
+        .expect(
+            format!(
+                "Failed to connect to Postgres. {}",
+                &configuration.database.connection_string()
+            )
+            .as_str(),
+        );
     let address = format!(
         "{}:{}",
         configuration.application.host, configuration.application.port
